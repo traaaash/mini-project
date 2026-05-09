@@ -1,20 +1,11 @@
 - name: Deploy E-Commerce Application
   hosts: web
   become: true
-  gather_facts: false
+  gather_facts: true
   vars:
     app_root: /home/ec2-user/app
 
   tasks:
-    - name: Install Python 3.9 for Ansible
-      raw: |
-        amazon-linux-extras install python3.9 -y
-        ln -sf /usr/bin/python3.9 /usr/bin/python3
-        ln -sf /usr/bin/python3.9 /usr/bin/python
-
-    - name: Test SSH connection
-      ping:
-
     - name: Ensure application directory exists
       file:
         path: "{{ app_root }}"
@@ -34,13 +25,10 @@
 
     - name: Install Docker package on RedHat/Amazon Linux
       yum:
-        name: docker
+        name: 
+          - docker
+          - docker-compose-plugin
         state: present
-      when: ansible_os_family == "RedHat"
-
-    - name: Install pip docker-compose fallback on RedHat/Amazon Linux
-      pip:
-        name: docker-compose
       when: ansible_os_family == "RedHat"
 
     - name: Start and enable Docker service
