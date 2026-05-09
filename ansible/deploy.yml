@@ -80,28 +80,15 @@
         group: ec2-user
         recurse: yes
 
-    - name: Pull Docker images with retries
-      shell: |
-        if [ -f /usr/local/bin/docker-compose ]; then
-          /usr/local/bin/docker-compose pull
-        else
-          docker compose pull
-        fi
-      args:
-        chdir: "{{ app_root }}"
-      register: pull_result
-      until: pull_result.rc == 0
-      retries: 3
-      delay: 15
-
     - name: Launch application with Docker Compose
       shell: |
         if [ -f /usr/local/bin/docker-compose ]; then
-          /usr/local/bin/docker-compose up -d
-        elif command -v docker-compose >/dev/null 2>&1; then
-          docker-compose up -d
+          /usr/local/bin/docker-compose up -d --build
         else
-          docker compose up -d
+          docker compose up -d --build
         fi
       args:
         chdir: "{{ app_root }}"
+      environment:
+        DOCKER_CLIENT_TIMEOUT: 600
+        COMPOSE_HTTP_TIMEOUT: 600
