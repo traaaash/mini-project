@@ -56,7 +56,7 @@
         group: ec2-user
         mode: "0755"
         remote_src: no
-        recurse: yes
+        # recurse: yes
 
     - name: Copy Docker Compose configuration
       copy:
