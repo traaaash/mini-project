@@ -6,6 +6,9 @@
     app_root: /home/ec2-user/app
 
   tasks:
+    - name: Test SSH connection
+      ping:
+
     - name: Install Python 3 for Ansible
       raw: |
         if ! command -v python3 >/dev/null 2>&1; then
