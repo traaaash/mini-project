@@ -9,13 +9,11 @@
     - name: Test SSH connection
       ping:
 
-    - name: Install Python 3 for Ansible
+    - name: Install Python 3.8 for Ansible
       raw: |
-        if ! command -v python3 >/dev/null 2>&1; then
-          yum update -y
-          yum install -y python3
-        fi
-        ln -sf /usr/bin/python3 /usr/bin/python
+        amazon-linux-extras install python3.8 -y
+        ln -sf /usr/bin/python3.8 /usr/bin/python3
+        ln -sf /usr/bin/python3.8 /usr/bin/python
 
     - name: Ensure application directory exists
       file:
