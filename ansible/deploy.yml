@@ -21,15 +21,20 @@
           - docker-compose-plugin
         state: present
         update_cache: yes
-      when: ansible_os_family == "Debian"
+      when: ansible_facts['os_family'] == "Debian"
 
-    - name: Install Docker package on RedHat/Amazon Linux
+    - name: Install Docker engine on RedHat/Amazon Linux
       yum:
-        name: 
-          - docker
-          - docker-compose-plugin
+        name: docker
         state: present
-      when: ansible_os_family == "RedHat"
+      when: ansible_facts['os_family'] == "RedHat"
+
+    - name: Install Docker Compose binary on RedHat/Amazon Linux
+      get_url:
+        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+      when: ansible_facts['os_family'] == "RedHat"
 
     - name: Start and enable Docker service
       service:
@@ -78,7 +83,9 @@
 
     - name: Launch application with Docker Compose
       shell: |
-        if command -v docker-compose >/dev/null 2>&1; then
+        if [ -f /usr/local/bin/docker-compose ]; then
+          /usr/local/bin/docker-compose up -d
+        elif command -v docker-compose >/dev/null 2>&1; then
           docker-compose up -d
         else
           docker compose up -d
