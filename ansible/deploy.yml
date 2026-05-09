@@ -6,11 +6,11 @@
     app_root: /home/ec2-user/app
 
   tasks:
-    - name: Install Python 3.8 for Ansible
+    - name: Install Python 3.9 for Ansible
       raw: |
-        amazon-linux-extras install python3.8 -y
-        ln -sf /usr/bin/python3.8 /usr/bin/python3
-        ln -sf /usr/bin/python3.8 /usr/bin/python
+        amazon-linux-extras install python3.9 -y
+        ln -sf /usr/bin/python3.9 /usr/bin/python3
+        ln -sf /usr/bin/python3.9 /usr/bin/python
 
     - name: Test SSH connection
       ping:
