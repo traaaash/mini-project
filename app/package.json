@@ -1,0 +1,12 @@
+{
+  "name": "ecommerce-app",
+  "version": "1.0.0",
+  "description": "Simple e-commerce demo application for AWS deployment",
+  "main": "index.js",
+  "scripts": {
+    "start": "pm2-runtime index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

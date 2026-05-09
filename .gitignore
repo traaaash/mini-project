@@ -1,0 +1,20 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+terraform.tfvars
+
+# Node
+app/node_modules/
+npm-debug.log*
+
+# Ansible
+inventory.ini
+key.pem
+
+# Python
+__pycache__/
+*.pyc
+
+# Other
+.DS_Store
