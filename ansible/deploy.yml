@@ -14,26 +14,23 @@
         group: ec2-user
         mode: "0755"
 
-    - name: Install Docker package on Debian/Ubuntu
+    - name: Install Docker and Plugins on Debian/Ubuntu
       apt:
         name:
           - docker.io
+          - docker-buildx-plugin
           - docker-compose-plugin
         state: present
         update_cache: yes
       when: ansible_facts['os_family'] == "Debian"
 
-    - name: Install Docker engine on RedHat/Amazon Linux
-      yum:
-        name: docker
+    - name: Install Docker and Plugins on RedHat/Amazon Linux
+      dnf: # Using dnf for Amazon Linux 2023
+        name:
+          - docker
+          - docker-buildx-plugin
+          - docker-compose-plugin
         state: present
-      when: ansible_facts['os_family'] == "RedHat"
-
-    - name: Install Docker Compose binary on RedHat/Amazon Linux
-      get_url:
-        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
-        dest: /usr/local/bin/docker-compose
-        mode: '0755'
       when: ansible_facts['os_family'] == "RedHat"
 
     - name: Start and enable Docker service
@@ -81,12 +78,7 @@
         recurse: yes
 
     - name: Launch application with Docker Compose
-      shell: |
-        if [ -f /usr/local/bin/docker-compose ]; then
-          /usr/local/bin/docker-compose up -d --build
-        else
-          docker compose up -d --build
-        fi
+      shell: "docker compose up -d --build"
       args:
         chdir: "{{ app_root }}"
       environment:
