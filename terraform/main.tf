@@ -24,6 +24,8 @@ data "aws_ami" "amazon_linux" {
   }
 }
 
+# --- NETWORK INFRASTRUCTURE ---
+
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
   enable_dns_support   = true
@@ -38,7 +40,7 @@ resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.main.id
   cidr_block              = cidrsubnet(aws_vpc.main.cidr_block, 8, count.index)
-  availability_zone       = ["us-east-1a", "us-east-1b"][count.index]
+  availability_zone       = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
 
   tags = {
@@ -72,6 +74,8 @@ resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
 }
+
+# --- SECURITY GROUPS ---
 
 resource "aws_security_group" "alb" {
   name        = "ecommerce-alb-sg"
@@ -132,6 +136,8 @@ resource "aws_security_group" "web" {
   }
 }
 
+# --- LOAD BALANCER ---
+
 resource "aws_lb" "web" {
   name               = "ecommerce-alb"
   internal           = false
@@ -168,8 +174,8 @@ resource "aws_lb_target_group" "web" {
 
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.web.arn
-  port              = 80
-  protocol          = "HTTP"
+  port               = 80
+  protocol           = "HTTP"
 
   default_action {
     type             = "forward"
@@ -177,14 +183,24 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+# --- EC2 INSTANCE WITH FIXED STORAGE ---
+
 resource "aws_instance" "web" {
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = var.instance_type
-  subnet_id              = aws_subnet.public[0].id
-  vpc_security_group_ids = [aws_security_group.web.id]
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = var.instance_type
+  subnet_id                   = aws_subnet.public[0].id
+  vpc_security_group_ids      = [aws_security_group.web.id]
   associate_public_ip_address = true
-  key_name               = var.key_name
-  count                  = var.instance_count
+  key_name                    = var.key_name
+  count                       = var.instance_count
+
+  # Fix for the "No space left on device" error
+  root_block_device {
+    volume_size           = 20    # 20GB provides ample space for Docker and MongoDB
+    volume_type           = "gp3" # General Purpose SSD (Latest Gen)
+    delete_on_termination = true
+    encrypted             = true
+  }
 
   tags = {
     Name = "ecommerce-web-${count.index + 1}"
