@@ -3,6 +3,7 @@
   become: true
   gather_facts: true
   vars:
+    # app_root should be consistent with where the user resides
     app_root: /home/ec2-user/app
 
   tasks:
@@ -14,17 +15,8 @@
         group: ec2-user
         mode: "0755"
 
-    - name: Install Docker and Plugins on Debian/Ubuntu
-      apt:
-        name:
-          - docker.io
-          - docker-buildx-plugin
-          - docker-compose-plugin
-        state: present
-        update_cache: yes
-      when: ansible_facts['os_family'] == "Debian"
-
-    - name: Install Docker engine on RedHat/Amazon Linux
+    # --- DOCKER INSTALLATION (RedHat/Amazon Linux for AL2023) ---
+    - name: Install Docker engine
       dnf:
         name: docker
         state: present
@@ -35,13 +27,14 @@
         path: "{{ item }}"
         state: directory
         mode: '0755'
-        owner: "{{ 'ec2-user' if '/home/ec2-user' in item else 'root' }}"
+        owner: "{{ 'ec2-user' if 'home' in item else 'root' }}"
       loop:
         - /usr/libexec/docker/cli-plugins
         - /home/ec2-user/.docker/cli-plugins
       when: ansible_facts['os_family'] == "RedHat"
 
-    - name: Install Docker Buildx plugin (Latest v0.17.1)
+    # Fix: This ensures the specific version required for the build process (0.17.1+)
+    - name: Install Docker Buildx plugin (Force v0.17.1)
       get_url:
         url: https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-amd64
         dest: /usr/libexec/docker/cli-plugins/docker-buildx
@@ -49,7 +42,7 @@
         force: yes
       when: ansible_facts['os_family'] == "RedHat"
 
-    - name: Link Buildx to User directory for high priority
+    - name: Link Buildx to User directory for CLI priority
       file:
         src: /usr/libexec/docker/cli-plugins/docker-buildx
         dest: "/home/ec2-user/.docker/cli-plugins/docker-buildx"
@@ -78,42 +71,41 @@
         groups: docker
         append: true
 
-    - name: Copy application files
+    # --- APPLICATION DEPLOYMENT ---
+    - name: Copy application source code
       copy:
         src: ../app/
         dest: "{{ app_root }}/app"
         owner: ec2-user
         group: ec2-user
         mode: "0755"
-        remote_src: no
 
-    - name: Copy Docker Compose configuration
+    - name: Copy Docker Compose and Nginx config
       copy:
-        src: docker-compose.yml
-        dest: "{{ app_root }}/docker-compose.yml"
+        src: "{{ item }}"
+        dest: "{{ app_root }}/{{ item }}"
         owner: ec2-user
         group: ec2-user
         mode: "0644"
+      loop:
+        - docker-compose.yml
+        - nginx.conf
 
-    - name: Copy Nginx configuration
-      copy:
-        src: nginx.conf
-        dest: "{{ app_root }}/nginx.conf"
-        owner: ec2-user
-        group: ec2-user
-        mode: "0644"
-
-    - name: Ensure application ownership
+    - name: Fix ownership before build
       file:
         path: "{{ app_root }}"
         owner: ec2-user
         group: ec2-user
         recurse: yes
 
-    - name: Launch application with Docker Compose
+    # The PDF states that the app becomes accessible via ALB after containers start
+    - name: Launch application stack (Nginx, Node, MongoDB)
       shell: "docker compose up -d --build"
       args:
         chdir: "{{ app_root }}"
       environment:
         DOCKER_CLIENT_TIMEOUT: 600
         COMPOSE_HTTP_TIMEOUT: 600
+
+    - name: Prune old images to save space on t3.micro
+      shell: "docker image prune -f"

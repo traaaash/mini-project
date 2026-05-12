@@ -8,7 +8,6 @@ app/node_modules/
 npm-debug.log*
 
 # Ansible
-inventory.ini
 key.pem
 
 # Python

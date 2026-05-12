@@ -27,7 +27,6 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -46,7 +45,8 @@ jobs:
       - id: export
         name: Export Instance IPs
         run: |
-          IPS=$(terraform output -json instance_public_ips | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
+          # Updated to match the new output name in outputs.tf
+          IPS=$(terraform output -json instance_ips | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
           echo "instance_ips=$IPS" >> $GITHUB_OUTPUT
 
   ansible:
@@ -72,7 +72,7 @@ jobs:
         run: |
           echo "[web]" > inventory.ini
           for ip in $(echo "${{ needs.terraform.outputs.instance_ips }}" | tr ',' ' '); do
-            echo "$ip ansible_user=ec2-user ansible_ssh_private_key_file=key.pem ansible_python_interpreter=/usr/bin/python3" >> inventory.ini
+            echo "$ip ansible_user=ec2-user ansible_ssh_private_key_file=key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory.ini
           done
 
       - name: Run Ansible Deployment

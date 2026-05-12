@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region where resources will be created"
   type        = string
-  default     = "us-east-1"
+  default     = "us-east-1" 
 }
 
 variable "key_name" {
@@ -12,11 +12,11 @@ variable "key_name" {
 variable "instance_type" {
   description = "EC2 instance type for the application hosts"
   type        = string
-  default     = "t3.micro"
+  default     = "t3.micro"  
 }
 
 variable "instance_count" {
   description = "Number of EC2 instances to launch"
   type        = number
-  default     = 1
+  default     = 2 
 }
