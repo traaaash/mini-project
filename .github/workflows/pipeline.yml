@@ -45,7 +45,7 @@ jobs:
       - id: export
         name: Export Instance IPs
         run: |
-          # Updated to match the new output name in outputs.tf
+          # This pulls the public IPs we defined in outputs.tf and formats them as a comma-separated list
           IPS=$(terraform output -json instance_ips | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
           echo "instance_ips=$IPS" >> $GITHUB_OUTPUT
 
@@ -71,6 +71,7 @@ jobs:
       - name: Generate Inventory
         run: |
           echo "[web]" > inventory.ini
+          # Loop through the list of IPs provided by the Terraform job
           for ip in $(echo "${{ needs.terraform.outputs.instance_ips }}" | tr ',' ' '); do
             echo "$ip ansible_user=ec2-user ansible_ssh_private_key_file=key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory.ini
           done
@@ -79,6 +80,7 @@ jobs:
         env:
           ANSIBLE_HOST_KEY_CHECKING: "False"
         run: |
+          # Runs the fixed deployment playbook against both instances
           ansible-playbook -i inventory.ini ansible/deploy.yml
 
   destroy:

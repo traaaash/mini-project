@@ -37,7 +37,7 @@ resource "aws_internet_gateway" "gw" {
   vpc_id = aws_vpc.main.id 
 }
 
-# Public Subnets for ALB and NAT Gateway
+# Public Subnets for ALB and EC2 Instances (to allow GitHub Actions SSH access)
 resource "aws_subnet" "public" {
   count                   = 2
   vpc_id                  = aws_vpc.main.id
@@ -47,27 +47,7 @@ resource "aws_subnet" "public" {
   tags = { Name = "ecommerce-public-subnet-${count.index + 1}" }
 }
 
-# Private Subnets for EC2 Instances 
-resource "aws_subnet" "private" {
-  count             = 2
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.${count.index + 1}.0/24" # 10.0.1.0/24 and 10.0.2.0/24 
-  availability_zone = data.aws_availability_zones.available.names[count.index]
-  tags = { Name = "ecommerce-private-subnet-${count.index + 1}" }
-}
-
-# NAT Gateway logic [cite: 28]
-resource "aws_eip" "nat" {
-  domain = "vpc"
-}
-
-resource "aws_nat_gateway" "main" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id
-  tags          = { Name = "ecommerce-nat" }
-}
-
-# Route Tables
+# Route Table
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
   route {
@@ -76,24 +56,10 @@ resource "aws_route_table" "public" {
   }
 }
 
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.main.id
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.main.id 
-  }
-}
-
 resource "aws_route_table_association" "public" {
   count          = 2
   subnet_id      = aws_subnet.public[count.index].id
   route_table_id = aws_route_table.public.id
-}
-
-resource "aws_route_table_association" "private" {
-  count          = 2
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
 }
 
 # --- SECURITY GROUPS ---
@@ -119,12 +85,14 @@ resource "aws_security_group" "web" {
   name   = "ecommerce-web-sg"
   vpc_id = aws_vpc.main.id
   ingress {
+    description = "Allow SSH from GitHub Actions"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Keep for Ansible access
+    cidr_blocks = ["0.0.0.0/0"]
   }
   ingress {
+    description     = "Allow HTTP from ALB"
     from_port       = 80 
     to_port         = 80
     protocol        = "tcp"
@@ -168,15 +136,16 @@ resource "aws_lb_listener" "http" {
   }
 }
 
-# --- EC2 INSTANCES [cite: 60, 65] ---
+# --- EC2 INSTANCES ---
 
 resource "aws_instance" "web" {
-  count                  = var.instance_count
-  ami                    = data.aws_ami.amazon_linux.id
-  instance_type          = var.instance_type 
-  subnet_id              = aws_subnet.private[count.index].id 
-  vpc_security_group_ids = [aws_security_group.web.id]
-  key_name               = var.key_name
+  count                       = var.instance_count
+  ami                         = data.aws_ami.amazon_linux.id
+  instance_type               = var.instance_type 
+  subnet_id                   = aws_subnet.public[count.index].id 
+  vpc_security_group_ids      = [aws_security_group.web.id]
+  key_name                    = var.key_name
+  associate_public_ip_address = true # Required for Ansible SSH access
 
   root_block_device {
     volume_size = 20

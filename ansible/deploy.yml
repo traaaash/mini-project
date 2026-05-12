@@ -3,7 +3,6 @@
   become: true
   gather_facts: true
   vars:
-    # app_root should be consistent with where the user resides
     app_root: /home/ec2-user/app
 
   tasks:
@@ -15,7 +14,7 @@
         group: ec2-user
         mode: "0755"
 
-    # --- DOCKER INSTALLATION (RedHat/Amazon Linux for AL2023) ---
+    # --- DOCKER INSTALLATION (Amazon Linux 2023) ---
     - name: Install Docker engine
       dnf:
         name: docker
@@ -33,7 +32,6 @@
         - /home/ec2-user/.docker/cli-plugins
       when: ansible_facts['os_family'] == "RedHat"
 
-    # Fix: This ensures the specific version required for the build process (0.17.1+)
     - name: Install Docker Buildx plugin (Force v0.17.1)
       get_url:
         url: https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-amd64
@@ -42,7 +40,7 @@
         force: yes
       when: ansible_facts['os_family'] == "RedHat"
 
-    - name: Link Buildx to User directory for CLI priority
+    - name: Link Buildx to User directory
       file:
         src: /usr/libexec/docker/cli-plugins/docker-buildx
         dest: "/home/ec2-user/.docker/cli-plugins/docker-buildx"
@@ -71,6 +69,9 @@
         groups: docker
         append: true
 
+    - name: Reset connection to apply group changes
+      meta: reset_connection
+
     # --- APPLICATION DEPLOYMENT ---
     - name: Copy application source code
       copy:
@@ -98,7 +99,6 @@
         group: ec2-user
         recurse: yes
 
-    # The PDF states that the app becomes accessible via ALB after containers start
     - name: Launch application stack (Nginx, Node, MongoDB)
       shell: "docker compose up -d --build"
       args:
@@ -107,5 +107,5 @@
         DOCKER_CLIENT_TIMEOUT: 600
         COMPOSE_HTTP_TIMEOUT: 600
 
-    - name: Prune old images to save space on t3.micro
+    - name: Prune old images to save space
       shell: "docker image prune -f"

@@ -1,7 +1,7 @@
 output "instance_ips" {
-  description = "IP addresses of the EC2 instances for Ansible inventory"
-  # We use private_ip because the instances are in Private Subnets per the architecture
-  value       = aws_instance.web[*].private_ip
+  description = "Public IP addresses for Ansible inventory to allow GitHub Actions SSH access"
+  # Changed from private_ip to public_ip so the runner can connect
+  value       = aws_instance.web[*].public_ip
 }
 
 output "alb_dns_name" {
