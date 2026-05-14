@@ -13,7 +13,8 @@ jobs:
       run:
         working-directory: terraform
     outputs:
-      instance_ips: ${{ steps.export.outputs.instance_ips }}
+      bastion_ip: ${{ steps.export_ips.outputs.bastion_ip }}
+      private_ips: ${{ steps.export_ips.outputs.private_ips }}
 
     steps:
       - name: Checkout Code
@@ -42,15 +43,16 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
-      - id: export
-        name: Export Instance IPs
+      - id: export_ips
+        name: Export Bastion and Private IPs
         run: |
-          # Pulls the instance_public_ips defined in outputs.tf (as per lab instructions)
-          IPS=$(terraform output -json instance_public_ips | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
-          echo "instance_ips=$IPS" >> $GITHUB_OUTPUT
+          BASTION_IP=$(terraform output -raw bastion_public_ip)
+          PRIVATE_IPS=$(terraform output -json web_instance_private_ips | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
+          echo "bastion_ip=$BASTION_IP" >> $GITHUB_OUTPUT
+          echo "private_ips=$PRIVATE_IPS" >> $GITHUB_OUTPUT
 
   ansible:
-    name: Configure Servers
+    name: Configure Servers via Bastion
     runs-on: ubuntu-latest
     needs: terraform
 
@@ -61,27 +63,30 @@ jobs:
       - name: Install Ansible and jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y ansible jq python3-pip
+          sudo apt-get install -y ansible jq
 
       - name: Setup SSH Key
         run: |
           echo "${{ secrets.EC2_KEY }}" > key.pem
           chmod 600 key.pem
 
-      - name: Generate Inventory
+      - name: Generate Inventory for Bastion ProxyJump
         run: |
+          BASTION_IP="${{ needs.terraform.outputs.bastion_ip }}"
+          PRIVATE_IPS="${{ needs.terraform.outputs.private_ips }}"
+
           echo "[web]" > inventory.ini
-          # Loop through the list of IPs provided by the Terraform job
-          for ip in $(echo "${{ needs.terraform.outputs.instance_ips }}" | tr ',' ' '); do
-            echo "$ip ansible_user=ec2-user ansible_ssh_private_key_file=key.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory.ini
+          for ip in $(echo "$PRIVATE_IPS" | tr ',' ' '); do
+            echo "$ip" >> inventory.ini
           done
 
+          echo "[web:vars]" >> inventory.ini
+          echo "ansible_user=ec2-user" >> inventory.ini
+          echo "ansible_ssh_private_key_file=key.pem" >> inventory.ini
+          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -q ec2-user@$BASTION_IP -i key.pem\"'" >> inventory.ini
+
       - name: Run Ansible Deployment
-        env:
-          ANSIBLE_HOST_KEY_CHECKING: "False"
-        run: |
-          # Runs the fixed deployment playbook against both instances
-          ansible-playbook -i inventory.ini ansible/deploy.yml
+        run: ansible-playbook -i inventory.ini ansible/deploy.yml
 
   destroy:
     name: Destroy Infrastructure

@@ -14,48 +14,22 @@
         group: ec2-user
         mode: "0755"
 
-    # --- DOCKER INSTALLATION (Amazon Linux 2023) ---
-    - name: Install Docker engine
-      dnf:
-        name: docker
-        state: present
-      when: ansible_facts['os_family'] == "RedHat"
+    # --- DOCKER INSTALLATION (Amazon Linux 2) ---
+    - name: Update all packages
+      yum:
+        name: '*'
+        state: latest
 
-    - name: Ensure Docker CLI plugin directories exist
-      file:
-        path: "{{ item }}"
-        state: directory
-        mode: '0755'
-        owner: "{{ 'ec2-user' if 'home' in item else 'root' }}"
-      loop:
-        - /usr/libexec/docker/cli-plugins
-        - /home/ec2-user/.docker/cli-plugins
-      when: ansible_facts['os_family'] == "RedHat"
-
-    - name: Install Docker Buildx plugin (Force v0.17.1)
-      get_url:
-        url: https://github.com/docker/buildx/releases/download/v0.17.1/buildx-v0.17.1.linux-amd64
-        dest: /usr/libexec/docker/cli-plugins/docker-buildx
-        mode: '0755'
-        force: yes
-      when: ansible_facts['os_family'] == "RedHat"
-
-    - name: Link Buildx to User directory
-      file:
-        src: /usr/libexec/docker/cli-plugins/docker-buildx
-        dest: "/home/ec2-user/.docker/cli-plugins/docker-buildx"
-        state: link
-        owner: ec2-user
-        group: ec2-user
-      when: ansible_facts['os_family'] == "RedHat"
+    - name: Install Docker engine from amazon-linux-extras
+      shell: "amazon-linux-extras install docker -y"
 
     - name: Install Docker Compose V2 plugin
       get_url:
         url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
-        dest: /usr/libexec/docker/cli-plugins/docker-compose
+        dest: /usr/local/bin/docker-compose
         mode: '0755'
-        force: yes
-      when: ansible_facts['os_family'] == "RedHat"
+        state: present
+        force: yes # Ensure we get the latest version
 
     - name: Start and enable Docker service
       service:
@@ -100,7 +74,7 @@
         recurse: yes
 
     - name: Launch application stack (Nginx, Node, MongoDB)
-      shell: "docker compose up -d --build"
+      shell: "docker-compose up -d --build" # Changed to docker-compose for standalone binary
       args:
         chdir: "{{ app_root }}"
       environment:
