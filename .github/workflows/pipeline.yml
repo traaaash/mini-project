@@ -45,8 +45,8 @@ jobs:
       - id: export
         name: Export Instance IPs
         run: |
-          # This pulls the public IPs we defined in outputs.tf and formats them as a comma-separated list
-          IPS=$(terraform output -json instance_ips | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
+          # Pulls the instance_public_ips defined in outputs.tf (as per lab instructions)
+          IPS=$(terraform output -json instance_public_ips | jq -r '.[]' | tr '\n' ',' | sed 's/,$//')
           echo "instance_ips=$IPS" >> $GITHUB_OUTPUT
 
   ansible:

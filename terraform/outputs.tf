@@ -1,4 +1,4 @@
-output "instance_ips" {
+output "instance_public_ips" {
   description = "Public IP addresses for Ansible inventory to allow GitHub Actions SSH access"
   # Changed from private_ip to public_ip so the runner can connect
   value       = aws_instance.web[*].public_ip

@@ -41,7 +41,7 @@ Set values in `terraform/terraform.tfvars` or pass them during apply:
 aws_region = "us-east-1"
 key_name   = "my-ec2-keypair"
 instance_type = "t3.micro"
-instance_count = 1
+instance_count = 2
 ```
 
 ## Ansible deployment
