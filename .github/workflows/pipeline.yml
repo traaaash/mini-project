@@ -65,10 +65,12 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ansible jq
 
-      - name: Setup SSH Key
+      - name: Setup SSH Agent and Key
         run: |
+          eval "$(ssh-agent -s)"
           echo "${{ secrets.EC2_KEY }}" > key.pem
           chmod 600 key.pem
+          ssh-add key.pem
 
       - name: Generate Inventory for Bastion ProxyJump
         run: |
@@ -82,8 +84,8 @@ jobs:
 
           echo "[web:vars]" >> inventory.ini
           echo "ansible_user=ec2-user" >> inventory.ini
-          echo "ansible_ssh_private_key_file=key.pem" >> inventory.ini
-          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -q ec2-user@$BASTION_IP -i key.pem\"'" >> inventory.ini
+          # The SSH agent will handle the key, so we don't need to specify it here.
+          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -q ec2-user@$BASTION_IP\"'" >> inventory.ini
 
       - name: Run Ansible Deployment
         run: ansible-playbook -i inventory.ini ansible/deploy.yml
