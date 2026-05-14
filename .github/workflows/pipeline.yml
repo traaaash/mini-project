@@ -72,6 +72,15 @@ jobs:
           chmod 600 key.pem
           ssh-add key.pem
 
+      - name: Debug SSH Connection to Bastion
+        run: |
+          BASTION_IP="${{ needs.terraform.outputs.bastion_ip }}"
+          echo "Bastion IP: $BASTION_IP"
+          echo "Attempting direct SSH connection to Bastion..."
+          # Use ssh-agent for this connection. -A enables agent forwarding.
+          # This will fail if the bastion is unreachable or the key is bad.
+          ssh -A -o StrictHostKeyChecking=no ec2-user@$BASTION_IP "echo 'Successfully connected to bastion!'"
+
       - name: Generate Inventory for Bastion ProxyJump
         run: |
           BASTION_IP="${{ needs.terraform.outputs.bastion_ip }}"
@@ -84,8 +93,8 @@ jobs:
 
           echo "[web:vars]" >> inventory.ini
           echo "ansible_user=ec2-user" >> inventory.ini
-          # The SSH agent will handle the key, so we don't need to specify it here.
-          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -W %h:%p -q ec2-user@$BASTION_IP\"'" >> inventory.ini
+          # The SSH agent will handle the key. -A enables agent forwarding through the bastion.
+          echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -A -W %h:%p -q ec2-user@$BASTION_IP\"'" >> inventory.ini
 
       - name: Run Ansible Deployment
         run: ansible-playbook -i inventory.ini ansible/deploy.yml
