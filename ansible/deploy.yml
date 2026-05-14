@@ -20,15 +20,21 @@
         name: '*'
         state: latest
 
+    - name: Check if Docker is already installed
+      command: docker --version
+      register: docker_check
+      changed_when: false
+      ignore_errors: true
+
     - name: Install Docker engine from amazon-linux-extras
       shell: "amazon-linux-extras install docker -y"
+      when: docker_check.failed
 
     - name: Install Docker Compose V2 plugin
       get_url:
         url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
         dest: /usr/local/bin/docker-compose
         mode: '0755'
-        state: present
         force: yes # Ensure we get the latest version
 
     - name: Start and enable Docker service
