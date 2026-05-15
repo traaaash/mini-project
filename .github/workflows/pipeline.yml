@@ -93,8 +93,14 @@ jobs:
 
           echo "[web:vars]" >> inventory.ini
           echo "ansible_user=ec2-user" >> inventory.ini
+          echo "ansible_python_interpreter=/usr/bin/python3" >> inventory.ini
           # The SSH agent will handle the key. -A enables agent forwarding through the bastion.
           echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -A -W %h:%p -q ec2-user@$BASTION_IP\"'" >> inventory.ini
+
+      - name: Wait for EC2 Instances to Initialize
+        run: |
+          echo "Waiting 60 seconds for EC2 instances to finish booting..."
+          sleep 60
 
       - name: Run Ansible Deployment
         run: ansible-playbook -i inventory.ini ansible/deploy.yml
