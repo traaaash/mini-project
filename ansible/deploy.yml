@@ -80,7 +80,8 @@
         recurse: yes
 
     - name: Launch application stack (Nginx, Node, MongoDB)
-      shell: "docker-compose up -d --build" # Changed to docker-compose for standalone binary
+      # Added the absolute path to the binary here:
+      shell: "/usr/local/bin/docker-compose up -d --build" 
       args:
         chdir: "{{ app_root }}"
       environment:
