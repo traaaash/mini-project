@@ -63,7 +63,9 @@ jobs:
       - name: Install Ansible and jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y ansible jq
+          sudo apt-get install -y jq
+          # Use pipx to lock Ansible to a version that supports Python 3.8
+          pipx install ansible==9.5.1
           ansible-galaxy collection install community.docker 
 
       - name: Setup SSH Agent
@@ -90,7 +92,6 @@ jobs:
 
           echo "[web:vars]" >> inventory.ini
           echo "ansible_user=ec2-user" >> inventory.ini
-          # Tell Ansible to use the new Python 3.8 interpreter
           echo "ansible_python_interpreter=/usr/bin/python3.8" >> inventory.ini
           echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o ProxyCommand=\"ssh -A -W %h:%p -q ec2-user@$BASTION_IP\"'" >> inventory.ini
 
