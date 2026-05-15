@@ -63,9 +63,13 @@ jobs:
       - name: Install Ansible and jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y jq
-          # Use pipx to lock Ansible to a version that supports Python 3.8
-          pipx install ansible==9.5.1
+          # 1. Forcefully remove any system-installed Ansible
+          sudo apt-get remove -y ansible || true
+          sudo apt-get install -y jq pipx
+          # 2. Force pipx to install exactly v9.5.1 and overwrite any existing links
+          pipx install --force ansible==9.5.1
+          # 3. Reload the path so the runner immediately recognizes the new pipx Ansible
+          export PATH="/home/runner/.local/bin:$PATH"
           ansible-galaxy collection install community.docker 
 
       - name: Setup SSH Agent
@@ -113,7 +117,8 @@ jobs:
         env:
           ANSIBLE_PIPELINING: "true"
           ANSIBLE_HOST_KEY_CHECKING: "false"
-        run: ansible-playbook -i inventory.ini ansible/deploy.yml
+        # Force the runner to use the pipx installation path
+        run: /home/runner/.local/bin/ansible-playbook -i inventory.ini ansible/deploy.yml
 
   destroy:
     name: Destroy Infrastructure
