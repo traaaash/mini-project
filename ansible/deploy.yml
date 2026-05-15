@@ -32,10 +32,11 @@
 
     - name: Install Docker Compose V2 plugin
       get_url:
-        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+        # Changed from 'latest/download/' to 'download/v2.20.0/'
+        url: https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-linux-x86_64
         dest: /usr/local/bin/docker-compose
         mode: '0755'
-        force: yes # Ensure we get the latest version
+        force: yes # Ensure we overwrite the broken latest version
 
     - name: Start and enable Docker service
       service:
