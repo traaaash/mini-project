@@ -60,14 +60,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Install Ansible and jq
+      - name: Install Ansible securely via VENV
         run: |
           sudo apt-get update
-          sudo apt-get remove -y ansible || true
-          sudo apt-get install -y jq
-          # Let GitHub's pipx handle the installation path automatically
-          pipx install --force ansible==9.5.1
-          ansible-galaxy collection install community.docker 
+          sudo apt-get install -y jq python3-venv
+          
+          # Patching the project's 'apt install' to use a Python 3.8 compatible venv
+          python3 -m venv /tmp/ansible-venv
+          /tmp/ansible-venv/bin/pip install "ansible-core==2.16.14" "ansible==9.13.0"
+          /tmp/ansible-venv/bin/ansible-galaxy collection install community.docker 
 
       - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.9.0
@@ -114,8 +115,8 @@ jobs:
         env:
           ANSIBLE_PIPELINING: "true"
           ANSIBLE_HOST_KEY_CHECKING: "false"
-        # Removed the absolute path here so it uses pipx's system bin!
-        run: ansible-playbook -i inventory.ini ansible/deploy.yml
+        # Execute using the isolated venv binary
+        run: /tmp/ansible-venv/bin/ansible-playbook -i inventory.ini ansible/deploy.yml
 
   destroy:
     name: Destroy Infrastructure
