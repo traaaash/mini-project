@@ -95,10 +95,19 @@ jobs:
 
       - name: Wait for EC2 Instances to Initialize
         run: |
-          echo "Waiting 120 seconds for EC2 instances to finish booting..."
-          sleep 120
+          BASTION_IP="${{ needs.terraform.outputs.bastion_ip }}"
+          PRIVATE_IPS="${{ needs.terraform.outputs.private_ips }}"
+          
+          echo "Waiting for background boot processes to finish..."
+          for ip in $(echo "$PRIVATE_IPS" | tr ',' ' '); do
+            echo "Checking background tasks on $ip..."
+            ssh -o StrictHostKeyChecking=no -J ec2-user@$BASTION_IP ec2-user@$ip 'cloud-init status --wait'
+          done
 
       - name: Run Ansible Deployment
+        env:
+          ANSIBLE_PIPELINING: "true"
+          ANSIBLE_HOST_KEY_CHECKING: "false"
         run: ansible-playbook -i inventory.ini ansible/deploy.yml
 
   destroy:
