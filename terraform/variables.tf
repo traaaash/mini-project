@@ -7,6 +7,7 @@ variable "aws_region" {
 variable "key_name" {
   description = "Name of the existing AWS EC2 key pair for SSH access"
   type        = string
+  default     = "vockey"  # <-- THIS IS THE CRITICAL ADDITION
 }
 
 variable "instance_type" {
