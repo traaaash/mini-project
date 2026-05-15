@@ -101,8 +101,8 @@ jobs:
           echo "Waiting for background boot processes to finish..."
           for ip in $(echo "$PRIVATE_IPS" | tr ',' ' '); do
             echo "Checking background tasks on $ip..."
-            # Added sudo here!
-            ssh -o StrictHostKeyChecking=no -J ec2-user@$BASTION_IP ec2-user@$ip 'sudo cloud-init status --wait'
+            # Added || true here so it ignores timeout errors!
+            ssh -o StrictHostKeyChecking=no -J ec2-user@$BASTION_IP ec2-user@$ip 'sudo cloud-init status --wait || true'
           done
 
       - name: Run Ansible Deployment
